@@ -276,7 +276,7 @@ dialog p, dialog form { margin-top: 1rem; }
   .target-can { aspect-ratio: 1.12; }
   .can-status { font-size: .68rem; }
 }
-.footer a[rel="license"] { white-space: nowrap; }
+#appVersion, .footer a[rel="license"] { white-space: nowrap; }
 
 .stack { gap: .18rem; }
 .stack .can-row { gap: clamp(.28rem, 1.5vw, .7rem); }

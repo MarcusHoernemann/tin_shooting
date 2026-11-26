@@ -16,7 +16,7 @@ In der App führt **App installieren** durch die Installation. Auf iPhone und iP
 
 ## Neue Version veröffentlichen
 
-Bei jeder Veröffentlichung die Versionsnummer in `CACHE_NAME` in `sw.js` erhöhen. Veröffentlichte Änderungen am Service Worker lösen die Update-Erkennung aus. Die App prüft beim Start, bei erneutem Öffnen der Ansicht, regelmäßig im Vordergrund und auf Wunsch über **Auf Updates prüfen**. **Update installieren** übernimmt die neue Version und lädt die App neu. Der Spielstand bleibt lokal erhalten.
+Bei jeder Veröffentlichung die Versionsnummer in `version.js` erhöhen. Diese Nummer steht in der Fußzeile und kennzeichnet den Offline-Cache. Eine neue Nummer löst die Update-Erkennung aus. Die App prüft beim Start, bei erneutem Öffnen der Ansicht, regelmäßig im Vordergrund und auf Wunsch über **Auf Updates prüfen**. **Update installieren** übernimmt die neue Version und lädt die App neu. Der Spielstand bleibt lokal erhalten.
 
 ## Lizenz
 

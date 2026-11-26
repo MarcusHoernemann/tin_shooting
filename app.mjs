@@ -1,3 +1,4 @@
+import './version.js';
 import { formatDart, tally, DARTS_PER_TURN } from './game.mjs';
 
 const $ = id => document.getElementById(id);
@@ -5,6 +6,9 @@ const storageKey = 'tin-shooting-v1';
 const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
 const views = ['play', 'players', 'history', 'rules'];
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+$('appVersion').textContent = '· Version ' + globalThis.TIN_SHOOTING_VERSION;
+$('appVersion').hidden = false;
 
 function applyCurrentScoring(match) {
   if (match?.mode === 'stack' && !match.scoring) match.scoring = 'every-hit';

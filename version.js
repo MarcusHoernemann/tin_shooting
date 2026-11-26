@@ -1,0 +1,1 @@
+globalThis.TIN_SHOOTING_VERSION = '1.3.3';

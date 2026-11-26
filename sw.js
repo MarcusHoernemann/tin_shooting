@@ -1,11 +1,14 @@
+importScripts('./version.js');
+
 const scope = new URL(self.registration.scope);
 const CACHE_PREFIX = 'tin-shooting-' + encodeURIComponent(scope.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '1.3.2';
+const CACHE_NAME = CACHE_PREFIX + self.TIN_SHOOTING_VERSION;
 const indexUrl = new URL('./index.html', scope).href;
 const appFiles = [
   './index.html',
   './style.css',
   './app.mjs',
+  './version.js',
   './game.mjs',
   './manifest.webmanifest',
   './icons/comic-192.png',
