@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101a21">
+  <meta name="description" content="Tin Shooting. Ein Dosen-Dartspiel für bis zu acht Spieler von Marcus Hörnemann.">
+  <title>Tin Shooting</title>
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap head">
+      <a class="brand" href="./" aria-label="Tin Shooting Startseite">
+        <img src="./icons/icon-192.png" alt="" width="48" height="48">
+        <span>TIN<span class="mint">SHOOTING</span></span>
+      </a>
+      <nav aria-label="Hauptmenü">
+        <button data-view="play" aria-current="page">Spiel</button>
+        <button data-view="players">Spieler</button>
+        <button data-view="history">Verlauf</button>
+        <button data-view="rules">Regeln</button>
+      </nav>
+    </div>
+  </header>
+  <div class="wrap" id="updateBanner" hidden>
+    <div class="notice"><span>Eine neue Version ist verfügbar.</span>
+      <button class="primary" id="applyUpdate">Update installieren</button></div>
+  </div>
+  <main id="main" class="wrap" tabindex="-1">
+    <section id="play">
+      <div id="lobby" class="grid">
+        <div class="hero panel">
+          <div class="hero-copy">
+            <p class="eyebrow">Dartspiel · 1–8 Spieler</p>
+            <h1>Tin<br><em>Shooting</em></h1>
+            <p>Triff die richtigen Felder und räum das Dosenregal leer.</p>
+            <button class="text-button" data-view="rules">Spielregeln ansehen</button>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="can decorative rear"></div><div class="can decorative front"></div><div class="can decorative side"></div>
+          </div>
+        </div>
+        <div class="panel setup">
+          <h2>Neue Partie</h2>
+          <p id="setupHint">Wähle bis zu acht Spieler in Wurfreihenfolge.</p>
+          <form class="add-form" id="quickAdd">
+            <label for="quickName">Spielername</label>
+            <div class="input-row"><input id="quickName" required maxlength="36" autocomplete="off" placeholder="Name eingeben"><button type="submit">Hinzufügen</button></div>
+          </form>
+          <p id="selectionCount" class="count"></p>
+          <div id="selection" class="selection"></div>
+          <button type="button" id="start" class="primary wide">Partie starten</button>
+        </div>
+      </div>
+      <div id="match" class="grid" hidden>
+        <div class="panel targets">
+          <div class="game-top">
+            <div><p id="round" class="eyebrow"></p><h1 id="turnTitle" tabindex="-1" aria-live="polite"></h1></div>
+            <button id="cancelMatch" class="quiet">Abbrechen</button>
+          </div>
+          <div id="cans" class="shelf" aria-label="Dosenregal"></div>
+          <div id="turnDarts" class="dart-list" aria-label="Würfe in dieser Aufnahme"></div>
+          <button id="restart" class="primary wide" hidden>Neue Partie</button>
+          <button id="undoFinal" class="quiet wide" hidden>Letzten Dart zurücknehmen</button>
+        </div>
+        <div id="controls" class="panel controls">
+          <h2>Treffer eingeben</h2>
+          <p>Ring wählen, dann das getroffene Feld antippen.</p>
+          <div class="rings" id="rings" role="group" aria-label="Getroffener Ring">
+            <button data-ring="1" aria-pressed="true">Single <small>×1</small></button>
+            <button data-ring="2" aria-pressed="false">Double <small>×2</small></button>
+            <button data-ring="3" aria-pressed="false">Triple <small>×3</small></button>
+          </div>
+          <div id="fields" class="fields" role="group" aria-label="Getroffenes Zahlenfeld"></div>
+          <div class="bulls" role="group" aria-label="Bull und Fehlwurf">
+            <button data-field="25" data-multiplier="1">Bull</button>
+            <button data-field="25" data-multiplier="2">Bullseye</button>
+            <button data-field="0" data-multiplier="0">Fehlwurf</button>
+          </div>
+          <button id="undo" class="quiet wide">Letzten Dart zurücknehmen</button>
+        </div>
+        <div class="panel score-panel">
+          <h2>Punktestand</h2>
+          <ol id="scores" class="scores" aria-label="Punktestand"></ol>
+        </div>
+      </div>
+    </section>
+    <section id="players" class="panel page" hidden>
+      <h1>Spieler</h1>
+      <p>Gespeicherte Spieler lassen sich für jede neue Partie auswählen.</p>
+      <form class="add-form" id="playersAdd">
+        <label for="playerName">Spielername</label>
+        <div class="input-row"><input id="playerName" required maxlength="36" autocomplete="off" placeholder="Name eingeben"><button type="submit" class="primary">Hinzufügen</button></div>
+      </form>
+      <ul class="rows" id="playerList"></ul>
+    </section>
+    <section id="history" class="panel page" hidden>
+      <div class="section-head"><h1>Verlauf</h1><button id="clearHistory" class="danger">Verlauf löschen</button></div>
+      <p id="lastUse"></p>
+      <ul class="rows" id="historyList"></ul>
+    </section>
+    <section id="rules" class="panel page" hidden>
+      <h1>Spielregeln</h1>
+      <ol class="rules">
+        <li>Eine Partie dauert sechs Runden. Je Runde hat jeder Spieler drei Darts und das gleiche Dosenregal mit drei Zielfeldern.</li>
+        <li>Jede Dose trägt eine Feldnummer und hat einen bis drei Trefferpunkte. Single zieht einen ab, Double zwei und Triple drei. Bull zählt einfach, Bullseye doppelt.</li>
+        <li>Ein Treffer auf ein anderes Feld, auf eine bereits abgeräumte Dose oder neben das Board verbraucht einen Dart. Überschüssige Trefferpunkte verfallen.</li>
+        <li>Eine abgeräumte Dose bringt 100 Punkte. Wer alle drei Dosen in seiner Aufnahme abräumt, bekommt zusätzlich 50 Punkte. Stehengebliebene Dosen verfallen am Ende der Aufnahme.</li>
+        <li>Nach sechs Runden gewinnt der höchste Punktestand. Bei Gleichstand teilen sich die Führenden den Sieg. Im Solospiel spielst du auf deine persönliche Bestleistung. Das Maximum sind 2.100 Punkte.</li>
+      </ol>
+    </section>
+    <p id="feedback" class="notice wrap-status" role="status" hidden></p>
+  </main>
+  <footer class="wrap footer">
+    <p>© 2026 Marcus Hörnemann · <a href="https://github.com/MarcusHoernemann/tin_shooting">Quellcode</a> · <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></p>
+    <div><button id="install" class="quiet">App installieren</button><button id="checkUpdate" class="quiet">Auf Updates prüfen</button></div>
+  </footer>
+  <dialog id="installHelp" aria-labelledby="installTitle">
+    <h2 id="installTitle">App installieren</h2>
+    <p><strong>iPhone und iPad</strong> · In Safari teilen, „Zum Home-Bildschirm“ wählen und „Als Web-App öffnen“ aktivieren, falls die Option angezeigt wird.</p>
+    <p><strong>Android</strong> · Im Browsermenü „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.</p>
+    <p><strong>Chromebook und Rechner</strong> · Das Installationssymbol in der Adressleiste oder den Eintrag im Browsermenü verwenden. Auf macOS bietet Safari „Zum Dock hinzufügen“.</p>
+    <form method="dialog"><button class="primary">Schließen</button></form>
+  </dialog>
+</body>
+</html>
