@@ -6,13 +6,16 @@ const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeSty
 const views = ['play', 'players', 'history', 'rules'];
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
+function applyCurrentScoring(match) {
+  if (match?.mode === 'stack' && !match.scoring) match.scoring = 'every-hit';
+}
+
 function readData() {
   const defaults = { profiles: [], selected: [], match: null, history: [], lastUse: null };
   try {
     const saved = { ...defaults, ...JSON.parse(localStorage.getItem(storageKey)) };
-    if (saved.match?.mode === 'stack' && !saved.match.scoring && !tally(saved.match).done) {
-      saved.match.scoring = 'every-hit';
-    }
+    const match = saved.match;
+    if (match?.mode === 'stack' && !match.scoring && !tally(match).done) applyCurrentScoring(match);
     return saved;
   } catch {
     return defaults;
@@ -392,6 +395,7 @@ function undo() {
   if (!data.match?.darts.length) return;
   const finished = tally(data.match).done;
   data.match.darts.pop();
+  applyCurrentScoring(data.match);
   data.history = data.history.filter(entry => entry.id !== data.match.id);
   ring = 1;
   save();
