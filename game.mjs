@@ -1,4 +1,4 @@
-export const SHELVES = [
+const SHELVES = [
   [[20, 1], [19, 2], [18, 3]],
   [[16, 2], [15, 1], [17, 2]],
   [[10, 1], [14, 3], [12, 1]],
@@ -7,10 +7,10 @@ export const SHELVES = [
   [[25, 2], [13, 2], [20, 3]],
 ];
 export const DARTS_PER_TURN = 3;
-export const CAN_POINTS = 100;
-export const CLEAR_BONUS = 50;
+const CAN_POINTS = 100;
+const CLEAR_BONUS = 50;
 
-export function tally(match) {
+function tallyShelves(match) {
   const rounds = SHELVES.map(shelf => match.players.map(() => ({
     cans: shelf.map(([field, strength]) => ({ field, strength, remaining: strength })),
     darts: [],
@@ -35,13 +35,106 @@ export function tally(match) {
   }
   const scores = match.players.map((_, player) =>
     rounds.reduce((total, round) => total + round[player].points, 0));
+  const round = Math.floor(turn / match.players.length);
+  const player = turn % match.players.length;
+  const current = rounds[round]?.[player];
   return {
-    round: Math.floor(turn / match.players.length),
-    player: turn % match.players.length,
-    done: turn === SHELVES.length * match.players.length,
-    scores,
-    rounds,
+    round, player, done: !current, scores,
+    roundCount: SHELVES.length,
+    rows: current ? [current.cans] : [],
+    currentDarts: current?.darts ?? [],
   };
+}
+
+export const ROUNDS = 7;
+const LEVELS = [
+  { count: 5, strength: 3, points: 100 },
+  { count: 4, strength: 2, points: 150 },
+  { count: 3, strength: 1, points: 200 },
+];
+
+function buildTower(matchId, towerNumber) {
+  // A replay, a reload and undo must all produce the same targets.
+  let seed = 2166136261;
+  for (const character of matchId + ':' + towerNumber) {
+    seed = Math.imul(seed ^ character.charCodeAt(0), 16777619) >>> 0;
+  }
+  const fields = Array.from({ length: 20 }, (_, index) => index + 1);
+  fields.push(25);
+  for (let index = fields.length - 1; index > 0; index -= 1) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const other = seed % (index + 1);
+    [fields[index], fields[other]] = [fields[other], fields[index]];
+  }
+  return LEVELS.map(({ count, strength, points }) => Array.from({ length: count }, () => {
+    const field = fields.pop();
+    const required = field === 25 ? Math.min(strength, 2) : strength;
+    return { field, strength: required, remaining: required, points };
+  }));
+}
+
+function applyHit(rows, dart) {
+  const target = rows.flat().find(can => can.remaining > 0 && can.field === dart.field);
+  if (!target) return [];
+  target.remaining = Math.max(0, target.remaining - dart.multiplier);
+  if (target.remaining) return [];
+  const fallen = [target];
+
+  // Each higher can sits between two directly adjacent cans in the row below.
+  for (let level = 1; level < rows.length; level += 1) {
+    rows[level].forEach((can, index) => {
+      if (!can.remaining) return;
+      const supports = rows[level - 1];
+      if (supports[index].remaining || supports[index + 1].remaining) return;
+      can.remaining = 0;
+      fallen.push(can);
+    });
+  }
+  return fallen;
+}
+
+function tallyTower(match) {
+  const playerCount = match.players.length;
+  const limit = ROUNDS * playerCount * DARTS_PER_TURN;
+  const scores = match.players.map(() => 0);
+  let towerNumber = 1;
+  let rows = buildTower(match.id, towerNumber);
+  let lastFall = null;
+  const darts = match.darts.slice(0, limit);
+
+  for (let index = 0; index < darts.length; index += 1) {
+    const player = Math.floor(index / DARTS_PER_TURN) % playerCount;
+    const fallen = applyHit(rows, darts[index]);
+    if (!fallen.length) {
+      lastFall = null;
+      continue;
+    }
+    const points = fallen.reduce((sum, can) => sum + can.points, 0);
+    scores[player] += points;
+    const cleared = rows.every(row => row.every(can => !can.remaining));
+    lastFall = { player, points, count: fallen.length, cleared };
+    if (cleared && index + 1 < limit) {
+      towerNumber += 1;
+      rows = buildTower(match.id, towerNumber);
+    }
+  }
+
+  const turn = Math.floor(darts.length / DARTS_PER_TURN);
+  return {
+    round: Math.floor(turn / playerCount),
+    player: turn % playerCount,
+    roundCount: ROUNDS,
+    done: darts.length === limit,
+    scores,
+    rows,
+    towerNumber,
+    lastFall,
+    currentDarts: darts.slice(turn * DARTS_PER_TURN),
+  };
+}
+
+export function tally(match) {
+  return match.mode === 'tower' ? tallyTower(match) : tallyShelves(match);
 }
 
 export function formatDart({ field, multiplier }) {

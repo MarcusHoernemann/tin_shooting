@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101a21">
+  <meta name="theme-color" content="#181537">
   <meta name="description" content="Tin Shooting. Ein Dosen-Dartspiel für bis zu acht Spieler von Marcus Hörnemann.">
   <title>Tin Shooting</title>
   <link rel="icon" href="./icons/icon-192.png">
@@ -39,7 +39,7 @@
           <div class="hero-copy">
             <p class="eyebrow">Dartspiel · 1–8 Spieler</p>
             <h1>Tin<br><em>Shooting</em></h1>
-            <p>Triff die richtigen Felder und räum das Dosenregal leer.</p>
+            <p>Triff die richtigen Felder und bring den Dosenturm zum Einsturz.</p>
             <button class="text-button" data-view="rules">Spielregeln ansehen</button>
           </div>
           <div class="hero-art" aria-hidden="true">
@@ -64,7 +64,10 @@
             <div><p id="round" class="eyebrow"></p><h1 id="turnTitle" tabindex="-1" aria-live="polite"></h1></div>
             <button id="cancelMatch" class="quiet">Abbrechen</button>
           </div>
-          <div id="cans" class="shelf" aria-label="Dosenregal"></div>
+          <p id="legacyNotice" class="notice" hidden>Diese gespeicherte Partie läuft nach dem bisherigen Regelwerk.</p>
+          <p id="towerLabel" class="tower-label"></p>
+          <div id="cans" class="shelf" aria-label="Dosen" role="group"></div>
+          <p id="lastFall" class="fall-notice" role="status" hidden></p>
           <div id="turnDarts" class="dart-list" aria-label="Würfe in dieser Aufnahme"></div>
           <button id="restart" class="primary wide" hidden>Neue Partie</button>
           <button id="undoFinal" class="quiet wide" hidden>Letzten Dart zurücknehmen</button>
@@ -108,11 +111,11 @@
     <section id="rules" class="panel page" hidden>
       <h1>Spielregeln</h1>
       <ol class="rules">
-        <li>Eine Partie dauert sechs Runden. Je Runde hat jeder Spieler drei Darts und das gleiche Dosenregal mit drei Zielfeldern.</li>
-        <li>Jede Dose trägt eine Feldnummer und hat einen bis drei Trefferpunkte. Single zieht einen ab, Double zwei und Triple drei. Bull zählt einfach, Bullseye doppelt.</li>
-        <li>Ein Treffer auf ein anderes Feld, auf eine bereits abgeräumte Dose oder neben das Board verbraucht einen Dart. Überschüssige Trefferpunkte verfallen.</li>
-        <li>Eine abgeräumte Dose bringt 100 Punkte. Wer alle drei Dosen in seiner Aufnahme abräumt, bekommt zusätzlich 50 Punkte. Stehengebliebene Dosen verfallen am Ende der Aufnahme.</li>
-        <li>Nach sechs Runden gewinnt der höchste Punktestand. Bei Gleichstand teilen sich die Führenden den Sieg. Im Solospiel spielst du auf deine persönliche Bestleistung. Das Maximum sind 2.100 Punkte.</li>
+        <li>Eine Partie dauert sieben Runden. Pro Runde wirft jeder Spieler drei Darts.</li>
+        <li>Alle spielen auf denselben Turm mit drei Reihen. Dosen und offene Trefferpunkte bleiben beim Spielerwechsel bestehen. Sobald der Turm abgeräumt ist, erscheint der nächste mit neuen Zielfeldern.</li>
+        <li>Single zieht einen Trefferpunkt ab, Double zwei und Triple drei. Bull zählt einfach und Bullseye doppelt. Die Anzeige unter einer Dose zeigt, wie viele Trefferpunkte noch offen sind.</li>
+        <li>Eine Dose in der unteren Reihe bringt 100 Punkte, in der mittleren 150 und oben 200. Verliert eine Dose beide Stützen in der Reihe darunter, fällt sie ebenfalls. Alle Punkte aus demselben Treffer gehen an den Werfer, auch bei einem Einsturz über mehrere Reihen.</li>
+        <li>Fehlwürfe und Treffer auf andere Felder verbrauchen einen Dart. Nach sieben Runden gewinnt der höchste Punktestand. Bei Gleichstand teilen sich die Führenden den Sieg.</li>
       </ol>
     </section>
     <p id="feedback" class="notice wrap-status" role="status" hidden></p>

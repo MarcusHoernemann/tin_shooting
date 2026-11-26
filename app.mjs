@@ -1,4 +1,4 @@
-import { formatDart, SHELVES, tally, DARTS_PER_TURN } from './game.mjs';
+import { formatDart, tally, DARTS_PER_TURN } from './game.mjs';
 
 const $ = id => document.getElementById(id);
 const storageKey = 'tin-shooting-v1';
@@ -143,7 +143,7 @@ function renderPlayers() {
 function startMatch() {
   const players = data.selected.map(id => data.profiles.find(profile => profile.id === id)?.name).filter(Boolean);
   if (!players.length) return;
-  data.match = { id: crypto.randomUUID(), players, darts: [] };
+  data.match = { id: crypto.randomUUID(), mode: 'tower', players, darts: [] };
   data.lastUse = new Date().toISOString();
   ring = 1;
   showMessage();
@@ -155,8 +155,22 @@ function startMatch() {
 function renderMatch() {
   const match = data.match;
   const state = tally(match);
-  $('round').textContent = state.done ? 'Endstand' : 'Runde ' + (state.round + 1) + ' von ' + SHELVES.length;
+  $('round').textContent = state.done ? 'Endstand' : 'Runde ' + (state.round + 1) + ' von ' + state.roundCount;
+  const isTower = match.mode === 'tower';
+  $('cans').classList.toggle('tower', isTower);
   $('cans').hidden = state.done;
+  $('legacyNotice').hidden = isTower || state.done;
+  $('towerLabel').hidden = !isTower || state.done;
+  $('towerLabel').textContent = isTower ? 'Turm ' + state.towerNumber : '';
+  const fall = state.lastFall;
+  $('lastFall').hidden = !fall;
+  if (fall) {
+    const cans = fall.count === 1 ? '1 Dose' : fall.count + ' Dosen';
+    const notice = fall.cleared ? ' · Turm abgeräumt' : '';
+    $('lastFall').textContent = match.players[fall.player] + ': ' + cans + ', +' + fall.points + ' P' + notice;
+  } else {
+    $('lastFall').textContent = '';
+  }
   $('turnDarts').hidden = state.done;
   $('controls').hidden = state.done;
   $('cancelMatch').hidden = state.done;
@@ -170,26 +184,15 @@ function renderMatch() {
     $('turnTitle').textContent = match.players.length === 1 ? highest + ' Punkte' :
       winners.length === 1 ? winners[0] + ' gewinnt' : 'Gleichstand: ' + winners.join(', ');
   } else {
-    const turn = state.rounds[state.round][state.player];
     $('turnTitle').textContent = match.players[state.player] + ' wirft';
-    for (const can of turn.cans) {
-      const container = element('div', 'target');
-      container.classList.toggle('down', can.remaining === 0);
-      const fieldName = can.field === 25 ? 'Bull' : String(can.field);
-      const graphic = element('div', 'can target-can', fieldName);
-      graphic.setAttribute('aria-hidden', 'true');
-      const status = can.remaining ? can.remaining + ' von ' + can.strength + ' offen' : 'Abgeräumt';
-      container.append(graphic, element('span', 'sr-only', fieldName + ': '), element('span', 'can-status', status));
-      container.dataset.strength = can.strength;
-      $('cans').append(container);
-    }
+    renderCans(state.rows, isTower);
     for (let index = 0; index < DARTS_PER_TURN; index += 1) {
-      const dart = turn.darts[index];
+      const dart = state.currentDarts[index];
       const chip = element('span', 'dart', dart ? formatDart(dart) : 'Dart ' + (index + 1));
       if (dart) chip.classList.add('entered');
       $('turnDarts').append(chip);
     }
-    const activeNumbers = new Set(turn.cans.filter(can => can.remaining > 0).map(can => can.field));
+    const activeNumbers = new Set(state.rows.flat().filter(can => can.remaining > 0).map(can => can.field));
     for (const numberButton of $('controls').querySelectorAll('[data-field]')) {
       numberButton.classList.toggle('available', activeNumbers.has(Number(numberButton.dataset.field)));
     }
@@ -208,6 +211,35 @@ function renderMatch() {
   $('undo').disabled = !match.darts.length;
   $('undoFinal').hidden = !state.done;
   setRing(ring);
+}
+
+function renderCans(rows, isTower) {
+  const levels = ['Untere Reihe', 'Mittlere Reihe', 'Obere Reihe'];
+  for (let level = rows.length - 1; level >= 0; level -= 1) {
+    const row = element('div', 'can-row');
+    if (isTower) {
+      row.dataset.level = level;
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', levels[level]);
+    }
+    for (const can of rows[level]) {
+      const target = element('div', 'target');
+      target.classList.toggle('down', can.remaining === 0);
+      const fieldName = can.field === 25 ? 'Bull' : String(can.field);
+      const graphic = element('div', 'can target-can');
+      graphic.setAttribute('aria-hidden', 'true');
+      graphic.append(element('strong', 'can-number', fieldName));
+      if (isTower) graphic.append(element('small', 'can-value', can.points + ' P'));
+      const status = can.remaining ? can.remaining + '/' + can.strength : 'Gefallen';
+      const description = isTower ? fieldName + ', ' + can.points + ' Punkte. ' : fieldName + '. ';
+      const remaining = can.remaining ? can.remaining + ' Trefferpunkte offen.' : 'Gefallen.';
+      const marker = element('span', 'can-status', status);
+      marker.setAttribute('aria-hidden', 'true');
+      target.append(graphic, element('span', 'sr-only', description + remaining), marker);
+      row.append(target);
+    }
+    $('cans').append(row);
+  }
 }
 
 function setRing(value) {
