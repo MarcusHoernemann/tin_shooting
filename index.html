@@ -68,7 +68,7 @@
           <p id="towerLabel" class="tower-label"></p>
           <div id="cans" class="shelf" aria-label="Dosen" role="group"></div>
           <p id="lastFall" class="fall-notice" role="status" hidden></p>
-          <div id="turnDarts" class="dart-list" aria-label="Würfe in dieser Aufnahme"></div>
+          <div id="turnDarts" class="dart-list" role="group" aria-label="Würfe in dieser Aufnahme"></div>
           <button id="restart" class="primary wide" hidden>Neue Partie</button>
           <button id="undoFinal" class="quiet wide" hidden>Letzten Dart zurücknehmen</button>
         </div>
@@ -113,8 +113,8 @@
       <ol class="rules">
         <li>Eine Partie dauert sieben Runden. Pro Runde wirft jeder Spieler drei Darts.</li>
         <li>Alle spielen auf denselben Turm. Unten stehen drei Dosen, darüber zwei und ganz oben eine. Dosen und offene Trefferpunkte bleiben beim Spielerwechsel bestehen. Sobald der Turm abgeräumt ist, erscheint der nächste mit neuen Zielfeldern.</li>
-        <li>Jede Dose beginnt mit drei sichtbaren Ringen. Single entfernt einen Ring, Double zwei und Triple drei. Bull zählt einfach und Bullseye doppelt. Beim letzten Ring fällt die Dose.</li>
-        <li>Die direkt abgeräumte Dose zählt ihre Feldzahl mal Ringwert des letzten Darts. Verliert eine Dose eine Stütze, fällt sie ebenfalls. Jede so mitfallende Dose zählt dreimal ihre Feldzahl für den Werfer. Fällt die mittlere Dose unten, fallen beide Dosen in der Mitte und die oberste Dose mit.</li>
+        <li>Jede Dose beginnt mit drei Ringen um den Dosenkörper. Single entfernt einen Ring, Double zwei und Triple drei. Bull zählt einfach und Bullseye doppelt. Beim letzten Ring fällt die Dose.</li>
+        <li>Jeder Treffer auf eine stehende Dose bringt sofort ihre Feldzahl mal Ringwert. Single 11 bringt 11 Punkte. Triple 11 bringt 33 Punkte, auch wenn nur noch ein oder zwei Ringe übrig sind. Verliert eine Dose eine Stütze, fällt sie ebenfalls. Jede so mitfallende Dose zählt dreimal ihre Feldzahl für den Werfer. Fällt die mittlere Dose unten, fallen beide Dosen in der Mitte und die oberste Dose mit.</li>
         <li>Fehlwürfe und Treffer auf andere Felder verbrauchen einen Dart. Nach sieben Runden gewinnt der höchste Punktestand. Bei Gleichstand teilen sich die Führenden den Sieg.</li>
       </ol>
     </section>

@@ -189,9 +189,37 @@ button.primary:hover:not(:disabled) { background: #ffdf8b; }
 .down .target-can { transform: rotate(-20deg) scale(.76); opacity: .38; }
 .can-status { font-size: .73rem; text-align: center; font-weight: 700; white-space: nowrap; }
 .fall-notice { margin: 0 0 .55rem; color: var(--orange); font-size: .82rem; font-weight: 750; overflow-wrap: anywhere; }
-.dart-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; }
-.dart { padding: .45em .2em; text-align: center; color: var(--sub); border: 1px dashed var(--line); border-radius: 6px; font-size: .85rem; }
-.dart.entered { color: var(--mint); background: #c6ede5; border-style: solid; }
+.dart-list, .dart-transition { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; }
+.dart-list { position: relative; }
+.dart-transition { position: absolute; inset: 0; pointer-events: none; background: var(--panel); }
+.dart {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.dart-icon {
+  width: 35px;
+  height: 14px;
+  transform: rotate(-21deg);
+  background: linear-gradient(90deg, #04716c 0 35%, #414a54 35% 56%, #b66b2b 56% 79%, #414a54 79%);
+  clip-path: polygon(0 1%, 23% 1%, 35% 41%, 58% 41%, 62% 32%, 79% 32%, 83% 44%, 100% 50%, 83% 55%, 79% 66%, 62% 66%, 58% 59%, 35% 59%, 23% 100%, 0 100%, 10% 50%);
+}
+.dart.entered { background: #e4e4e1; }
+.dart.entered .dart-icon { opacity: .56; }
+.dart.entered::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 2px;
+  border-radius: 2px;
+  background: #a32736;
+  box-shadow: 0 0 0 1px #fff9;
+  transform: rotate(28deg);
+}
 .scores, .rows, .history-scores { display: grid; list-style: none; padding: 0; gap: .45rem; }
 .scores { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-block: .85rem 0; }
 .score, .row { display: flex; align-items: center; justify-content: space-between; gap: .65rem; padding: .55rem .7rem; border-radius: 7px; background: #cdd1d3; }
@@ -262,14 +290,23 @@ dialog p, dialog form { margin-top: 1rem; }
 .target-can[data-color="green"] { --metal: #8ddb8c; }
 .target-can[data-color="violet"] { --metal: #ccafff; }
 .target-can[data-color="rose"] { --metal: #ffabd5; }
-.can-rings { display: flex; gap: .20em; align-items: center; margin-top: .16em; }
-.can-ring {
-  width: .48em;
-  aspect-ratio: 1;
-  border: max(1.5px, .08em) solid #172029;
-  border-radius: 50%;
+.target-can[data-can-key] .can-number { position: absolute; top: 19%; }
+.can-bands {
+  position: absolute;
+  inset: 49% -4% 4%;
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  align-items: center;
 }
-.can-ring.spent { visibility: hidden; }
+.can-band {
+  height: 76%;
+  min-height: 2px;
+  border-block: 1px solid #182029;
+  border-radius: 13% 13% 17% 17% / 60% 60% 95% 95%;
+  background: linear-gradient(90deg, #20313e 0%, #716b62 12%, #fff4d6 32%, #e8dcc1 64%, #735a48 91%, #20313e 100%);
+  box-shadow: 0 1px 1px #18202970;
+}
+.can-band.spent { visibility: hidden; }
 .flight-layer { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 10; }
 .flying-can { position: absolute; margin: 0; will-change: transform, opacity; }
 @media (max-width: 800px) {

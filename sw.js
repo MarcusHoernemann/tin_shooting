@@ -1,6 +1,6 @@
 const scope = new URL(self.registration.scope);
 const CACHE_PREFIX = 'tin-shooting-' + encodeURIComponent(scope.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '1.2.0';
+const CACHE_NAME = CACHE_PREFIX + '1.3.0';
 const indexUrl = new URL('./index.html', scope).href;
 const appFiles = [
   './index.html',

@@ -78,9 +78,9 @@ function buildTower(matchId, towerNumber, stack) {
 
 function applyHit(rows, dart, stack) {
   const target = rows.flat().find(can => can.remaining > 0 && can.field === dart.field);
-  if (!target) return [];
+  if (!target) return null;
   target.remaining = Math.max(0, target.remaining - dart.multiplier);
-  if (target.remaining) return [];
+  if (target.remaining) return { fallen: [] };
   const fallen = [target];
 
   // Each higher can sits between two directly adjacent cans in the row below.
@@ -96,7 +96,7 @@ function applyHit(rows, dart, stack) {
       fallen.push(can);
     });
   }
-  return fallen;
+  return { fallen };
 }
 
 function tallyTower(match, stack) {
@@ -106,23 +106,32 @@ function tallyTower(match, stack) {
   let towerNumber = 1;
   let rows = buildTower(match.id, towerNumber, stack);
   let lastFall = null;
+  let lastHit = null;
+  const everyHit = stack && match.scoring === 'every-hit';
   const darts = match.darts.slice(0, limit);
 
   for (let index = 0; index < darts.length; index += 1) {
     const player = Math.floor(index / DARTS_PER_TURN) % playerCount;
-    const fallen = applyHit(rows, darts[index], stack);
-    if (!fallen.length) {
-      lastFall = null;
-      continue;
+    const dart = darts[index];
+    const hit = applyHit(rows, dart, stack);
+    lastHit = null;
+    lastFall = null;
+    if (!hit) continue;
+    const { fallen } = hit;
+    if (everyHit) {
+      const points = dart.field * dart.multiplier;
+      scores[player] += points;
+      lastHit = { player, points, dart };
     }
+    if (!fallen.length) continue;
     const points = fallen.reduce((sum, can, position) => {
       if (!stack) return sum + can.points;
-      const multiplier = position === 0 ? darts[index].multiplier : 3;
-      return sum + can.field * multiplier;
+      if (position > 0) return sum + can.field * 3;
+      return sum + (everyHit ? 0 : dart.field * dart.multiplier);
     }, 0);
     scores[player] += points;
     const cleared = rows.every(row => row.every(can => !can.remaining));
-    lastFall = { player, points, count: fallen.length, cleared, towerNumber, slots: fallen.map(can => can.slot) };
+    lastFall = { player, points: points + (lastHit?.points ?? 0), count: fallen.length, cleared, towerNumber, slots: fallen.map(can => can.slot) };
     if (cleared && index + 1 < limit) {
       towerNumber += 1;
       rows = buildTower(match.id, towerNumber, stack);
@@ -139,6 +148,7 @@ function tallyTower(match, stack) {
     rows,
     towerNumber,
     lastFall,
+    lastHit,
     currentDarts: darts.slice(turn * DARTS_PER_TURN),
   };
 }

@@ -9,7 +9,11 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 function readData() {
   const defaults = { profiles: [], selected: [], match: null, history: [], lastUse: null };
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(storageKey)) };
+    const saved = { ...defaults, ...JSON.parse(localStorage.getItem(storageKey)) };
+    if (saved.match?.mode === 'stack' && !saved.match.scoring && !tally(saved.match).done) {
+      saved.match.scoring = 'every-hit';
+    }
+    return saved;
   } catch {
     return defaults;
   }
@@ -144,7 +148,7 @@ function renderPlayers() {
 function startMatch() {
   const players = data.selected.map(id => data.profiles.find(profile => profile.id === id)?.name).filter(Boolean);
   if (!players.length) return;
-  data.match = { id: crypto.randomUUID(), mode: 'stack', players, darts: [] };
+  data.match = { id: crypto.randomUUID(), mode: 'stack', scoring: 'every-hit', players, darts: [] };
   data.lastUse = new Date().toISOString();
   ring = 1;
   showMessage();
@@ -166,20 +170,22 @@ function renderMatch() {
   $('towerLabel').hidden = !isTower || state.done;
   $('towerLabel').textContent = isTower ? 'Turm ' + state.towerNumber : '';
   const fall = state.lastFall;
-  $('lastFall').hidden = !fall;
+  const hit = state.lastHit;
+  $('lastFall').hidden = !fall && !hit;
   if (fall) {
     const cans = fall.count === 1 ? '1 Dose' : fall.count + ' Dosen';
     const notice = fall.cleared ? ' · Turm abgeräumt' : '';
     $('lastFall').textContent = match.players[fall.player] + ': ' + cans + ', +' + fall.points + ' P' + notice;
+  } else if (hit) {
+    $('lastFall').textContent = match.players[hit.player] + ': ' + formatDart(hit.dart) + ', +' + hit.points + ' P';
   } else {
     $('lastFall').textContent = '';
   }
-  $('turnDarts').hidden = state.done;
   $('controls').hidden = state.done;
   $('cancelMatch').hidden = state.done;
   $('restart').hidden = !state.done;
   $('cans').replaceChildren();
-  $('turnDarts').replaceChildren();
+  renderDarts(state.done ? match.darts.slice(-DARTS_PER_TURN) : state.currentDarts);
 
   if (state.done) {
     const highest = Math.max(...state.scores);
@@ -189,12 +195,6 @@ function renderMatch() {
   } else {
     $('turnTitle').textContent = match.players[state.player] + ' wirft';
     renderCans(state.rows, isTower, stack, state.towerNumber);
-    for (let index = 0; index < DARTS_PER_TURN; index += 1) {
-      const dart = state.currentDarts[index];
-      const chip = element('span', 'dart', dart ? formatDart(dart) : 'Dart ' + (index + 1));
-      if (dart) chip.classList.add('entered');
-      $('turnDarts').append(chip);
-    }
     const activeNumbers = new Set(state.rows.flat().filter(can => can.remaining > 0).map(can => can.field));
     for (const numberButton of $('controls').querySelectorAll('[data-field]')) {
       numberButton.classList.toggle('available', activeNumbers.has(Number(numberButton.dataset.field)));
@@ -214,6 +214,39 @@ function renderMatch() {
   $('undo').disabled = !match.darts.length;
   $('undoFinal').hidden = !state.done;
   setRing(ring);
+}
+
+function dartSymbols(darts) {
+  const symbols = document.createDocumentFragment();
+  for (let index = 0; index < DARTS_PER_TURN; index += 1) {
+    const dart = darts[index];
+    const description = 'Dart ' + (index + 1) + (dart ? ': ' + formatDart(dart) : ': bereit');
+    const chip = element('span', dart ? 'dart entered' : 'dart');
+    chip.title = description;
+    const icon = element('span', 'dart-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    chip.append(icon, element('span', 'sr-only', description));
+    symbols.append(chip);
+  }
+  return symbols;
+}
+
+function renderDarts(darts) {
+  $('turnDarts').replaceChildren(dartSymbols(darts));
+}
+
+function animateCompletedTurn(darts) {
+  if (reducedMotion.matches || typeof Element.prototype.animate !== 'function') return;
+  const overlay = element('div', 'dart-transition');
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.append(dartSymbols(darts));
+  $('turnDarts').append(overlay);
+  const fade = overlay.animate([
+    { opacity: 1, offset: 0 },
+    { opacity: 1, offset: .55 },
+    { opacity: 0, offset: 1 },
+  ], { duration: 330, easing: 'ease-out' });
+  fade.finished.then(() => overlay.remove(), () => overlay.remove());
 }
 
 function renderCans(rows, isTower, stack, towerNumber) {
@@ -243,9 +276,9 @@ function renderCans(rows, isTower, stack, towerNumber) {
           const settled = standing.indexOf(can) - (standing.length - 1) / 2;
           target.style.setProperty('--slide', (settled - original) * 60 + '%');
         }
-        const rings = element('div', 'can-rings');
+        const rings = element('div', 'can-bands');
         for (let ringIndex = 0; ringIndex < can.strength; ringIndex += 1) {
-          rings.append(element('span', ringIndex < can.remaining ? 'can-ring' : 'can-ring spent'));
+          rings.append(element('span', ringIndex >= can.strength - can.remaining ? 'can-band' : 'can-band spent'));
         }
         graphic.append(rings);
       } else if (isTower) {
@@ -333,8 +366,10 @@ function animateStack(before, fall, nextTowerNumber) {
 }
 
 function enterDart(field, multiplier) {
-  if (!data.match || tally(data.match).done) return;
   const match = data.match;
+  if (!match) return;
+  const priorState = tally(match);
+  if (priorState.done) return;
   const before = match.mode === 'stack' && !reducedMotion.matches && typeof Element.prototype.animate === 'function'
     ? stackPositions() : null;
   match.darts.push({ field, multiplier });
@@ -347,6 +382,9 @@ function enterDart(field, multiplier) {
   save();
   renderMatch();
   if (before) animateStack(before, state.lastFall, state.towerNumber);
+  if (!state.done && priorState.currentDarts.length === DARTS_PER_TURN - 1) {
+    animateCompletedTurn([...priorState.currentDarts, { field, multiplier }]);
+  }
   if (state.done) $('restart').focus();
 }
 
