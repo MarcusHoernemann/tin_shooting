@@ -1,6 +1,6 @@
 const scope = new URL(self.registration.scope);
 const CACHE_PREFIX = 'tin-shooting-' + encodeURIComponent(scope.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '1.3.1';
+const CACHE_NAME = CACHE_PREFIX + '1.3.2';
 const indexUrl = new URL('./index.html', scope).href;
 const appFiles = [
   './index.html',
@@ -8,10 +8,10 @@ const appFiles = [
   './app.mjs',
   './game.mjs',
   './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/maskable-512.png',
-  './icons/apple-touch.png',
+  './icons/comic-192.png',
+  './icons/comic-512.png',
+  './icons/comic-maskable-512.png',
+  './icons/comic-apple-touch.png',
 ].map(path => new URL(path, scope).href);
 const cachedUrls = new Set(appFiles);
 
