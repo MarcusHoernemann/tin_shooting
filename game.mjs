@@ -47,13 +47,15 @@ function tallyShelves(match) {
 }
 
 export const ROUNDS = 7;
-const LEVELS = [
+const PREVIOUS_LEVELS = [
   { count: 5, strength: 3, points: 100 },
   { count: 4, strength: 2, points: 150 },
   { count: 3, strength: 1, points: 200 },
 ];
 
-function buildTower(matchId, towerNumber) {
+const STACK_LEVELS = [3, 2, 1].map(count => ({ count, strength: 3 }));
+
+function buildTower(matchId, towerNumber, stack) {
   // A replay, a reload and undo must all produce the same targets.
   let seed = 2166136261;
   for (const character of matchId + ':' + towerNumber) {
@@ -66,14 +68,15 @@ function buildTower(matchId, towerNumber) {
     const other = seed % (index + 1);
     [fields[index], fields[other]] = [fields[other], fields[index]];
   }
-  return LEVELS.map(({ count, strength, points }) => Array.from({ length: count }, () => {
+  const levels = stack ? STACK_LEVELS : PREVIOUS_LEVELS;
+  return levels.map(({ count, strength, points }, level) => Array.from({ length: count }, (_, index) => {
     const field = fields.pop();
-    const required = field === 25 ? Math.min(strength, 2) : strength;
-    return { field, strength: required, remaining: required, points };
+    const required = !stack && field === 25 ? Math.min(strength, 2) : strength;
+    return { field, strength: required, remaining: required, points, slot: level + '-' + index };
   }));
 }
 
-function applyHit(rows, dart) {
+function applyHit(rows, dart, stack) {
   const target = rows.flat().find(can => can.remaining > 0 && can.field === dart.field);
   if (!target) return [];
   target.remaining = Math.max(0, target.remaining - dart.multiplier);
@@ -85,7 +88,10 @@ function applyHit(rows, dart) {
     rows[level].forEach((can, index) => {
       if (!can.remaining) return;
       const supports = rows[level - 1];
-      if (supports[index].remaining || supports[index + 1].remaining) return;
+      const leftStanding = supports[index].remaining > 0;
+      const rightStanding = supports[index + 1].remaining > 0;
+      const supported = stack ? leftStanding && rightStanding : leftStanding || rightStanding;
+      if (supported) return;
       can.remaining = 0;
       fallen.push(can);
     });
@@ -93,29 +99,33 @@ function applyHit(rows, dart) {
   return fallen;
 }
 
-function tallyTower(match) {
+function tallyTower(match, stack) {
   const playerCount = match.players.length;
   const limit = ROUNDS * playerCount * DARTS_PER_TURN;
   const scores = match.players.map(() => 0);
   let towerNumber = 1;
-  let rows = buildTower(match.id, towerNumber);
+  let rows = buildTower(match.id, towerNumber, stack);
   let lastFall = null;
   const darts = match.darts.slice(0, limit);
 
   for (let index = 0; index < darts.length; index += 1) {
     const player = Math.floor(index / DARTS_PER_TURN) % playerCount;
-    const fallen = applyHit(rows, darts[index]);
+    const fallen = applyHit(rows, darts[index], stack);
     if (!fallen.length) {
       lastFall = null;
       continue;
     }
-    const points = fallen.reduce((sum, can) => sum + can.points, 0);
+    const points = fallen.reduce((sum, can, position) => {
+      if (!stack) return sum + can.points;
+      const multiplier = position === 0 ? darts[index].multiplier : 3;
+      return sum + can.field * multiplier;
+    }, 0);
     scores[player] += points;
     const cleared = rows.every(row => row.every(can => !can.remaining));
-    lastFall = { player, points, count: fallen.length, cleared };
+    lastFall = { player, points, count: fallen.length, cleared, towerNumber, slots: fallen.map(can => can.slot) };
     if (cleared && index + 1 < limit) {
       towerNumber += 1;
-      rows = buildTower(match.id, towerNumber);
+      rows = buildTower(match.id, towerNumber, stack);
     }
   }
 
@@ -134,7 +144,9 @@ function tallyTower(match) {
 }
 
 export function tally(match) {
-  return match.mode === 'tower' ? tallyTower(match) : tallyShelves(match);
+  if (match.mode === 'stack') return tallyTower(match, true);
+  if (match.mode === 'tower') return tallyTower(match, false);
+  return tallyShelves(match);
 }
 
 export function formatDart({ field, multiplier }) {

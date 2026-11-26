@@ -4,6 +4,7 @@ const $ = id => document.getElementById(id);
 const storageKey = 'tin-shooting-v1';
 const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
 const views = ['play', 'players', 'history', 'rules'];
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 function readData() {
   const defaults = { profiles: [], selected: [], match: null, history: [], lastUse: null };
@@ -143,7 +144,7 @@ function renderPlayers() {
 function startMatch() {
   const players = data.selected.map(id => data.profiles.find(profile => profile.id === id)?.name).filter(Boolean);
   if (!players.length) return;
-  data.match = { id: crypto.randomUUID(), mode: 'tower', players, darts: [] };
+  data.match = { id: crypto.randomUUID(), mode: 'stack', players, darts: [] };
   data.lastUse = new Date().toISOString();
   ring = 1;
   showMessage();
@@ -156,10 +157,12 @@ function renderMatch() {
   const match = data.match;
   const state = tally(match);
   $('round').textContent = state.done ? 'Endstand' : 'Runde ' + (state.round + 1) + ' von ' + state.roundCount;
-  const isTower = match.mode === 'tower';
+  const stack = match.mode === 'stack';
+  const isTower = stack || match.mode === 'tower';
   $('cans').classList.toggle('tower', isTower);
+  $('cans').classList.toggle('stack', stack);
   $('cans').hidden = state.done;
-  $('legacyNotice').hidden = isTower || state.done;
+  $('legacyNotice').hidden = stack || state.done;
   $('towerLabel').hidden = !isTower || state.done;
   $('towerLabel').textContent = isTower ? 'Turm ' + state.towerNumber : '';
   const fall = state.lastFall;
@@ -185,7 +188,7 @@ function renderMatch() {
       winners.length === 1 ? winners[0] + ' gewinnt' : 'Gleichstand: ' + winners.join(', ');
   } else {
     $('turnTitle').textContent = match.players[state.player] + ' wirft';
-    renderCans(state.rows, isTower);
+    renderCans(state.rows, isTower, stack, state.towerNumber);
     for (let index = 0; index < DARTS_PER_TURN; index += 1) {
       const dart = state.currentDarts[index];
       const chip = element('span', 'dart', dart ? formatDart(dart) : 'Dart ' + (index + 1));
@@ -213,7 +216,8 @@ function renderMatch() {
   setRing(ring);
 }
 
-function renderCans(rows, isTower) {
+function renderCans(rows, isTower, stack, towerNumber) {
+  const colors = ['coral', 'cyan', 'gold', 'green', 'violet', 'rose'];
   const levels = ['Untere Reihe', 'Mittlere Reihe', 'Obere Reihe'];
   for (let level = rows.length - 1; level >= 0; level -= 1) {
     const row = element('div', 'can-row');
@@ -222,22 +226,42 @@ function renderCans(rows, isTower) {
       row.setAttribute('role', 'group');
       row.setAttribute('aria-label', levels[level]);
     }
-    for (const can of rows[level]) {
+    const cans = rows[level];
+    const standing = cans.filter(can => can.remaining > 0);
+    cans.forEach((can, index) => {
       const target = element('div', 'target');
       target.classList.toggle('down', can.remaining === 0);
       const fieldName = can.field === 25 ? 'Bull' : String(can.field);
       const graphic = element('div', 'can target-can');
       graphic.setAttribute('aria-hidden', 'true');
       graphic.append(element('strong', 'can-number', fieldName));
-      if (isTower) graphic.append(element('small', 'can-value', can.points + ' P'));
-      const status = can.remaining ? can.remaining + '/' + can.strength : 'Gefallen';
-      const description = isTower ? fieldName + ', ' + can.points + ' Punkte. ' : fieldName + '. ';
-      const remaining = can.remaining ? can.remaining + ' Trefferpunkte offen.' : 'Gefallen.';
-      const marker = element('span', 'can-status', status);
-      marker.setAttribute('aria-hidden', 'true');
-      target.append(graphic, element('span', 'sr-only', description + remaining), marker);
+      if (stack) {
+        graphic.dataset.color = colors[[0, 3, 5][level] + index];
+        graphic.dataset.canKey = towerNumber + ':' + can.slot;
+        if (can.remaining) {
+          const original = index - (cans.length - 1) / 2;
+          const settled = standing.indexOf(can) - (standing.length - 1) / 2;
+          target.style.setProperty('--slide', (settled - original) * 60 + '%');
+        }
+        const rings = element('div', 'can-rings');
+        for (let ringIndex = 0; ringIndex < can.strength; ringIndex += 1) {
+          rings.append(element('span', ringIndex < can.remaining ? 'can-ring' : 'can-ring spent'));
+        }
+        graphic.append(rings);
+      } else if (isTower) {
+        graphic.append(element('small', 'can-value', can.points + ' P'));
+      }
+      const description = isTower && !stack ? fieldName + ', ' + can.points + ' Punkte. ' : fieldName + '. ';
+      const remaining = can.remaining ? can.remaining + (stack ? ' Ringe offen.' : ' Trefferpunkte offen.') : 'Gefallen.';
+      target.append(graphic, element('span', 'sr-only', description + remaining));
+      if (!stack) {
+        const status = can.remaining ? can.remaining + '/' + can.strength : 'Gefallen';
+        const marker = element('span', 'can-status', status);
+        marker.setAttribute('aria-hidden', 'true');
+        target.append(marker);
+      }
       row.append(target);
-    }
+    });
     $('cans').append(row);
   }
 }
@@ -249,9 +273,70 @@ function setRing(value) {
   }
 }
 
+function stackPositions() {
+  const positions = new Map();
+  for (const can of $('cans').querySelectorAll('.target:not(.down) [data-can-key]')) {
+    positions.set(can.dataset.canKey, { can, bounds: can.getBoundingClientRect() });
+  }
+  return positions;
+}
+
+function launchCan({ can, bounds }, direction, delay) {
+  if (!bounds.width || bounds.bottom < 0 || bounds.top >= innerHeight) return;
+  const piece = can.cloneNode(true);
+  piece.classList.add('flying-can');
+  Object.assign(piece.style, {
+    left: bounds.left + 'px', top: bounds.top + 'px',
+    width: bounds.width + 'px', height: bounds.height + 'px',
+  });
+  $('flightLayer').append(piece);
+  const distance = Math.min(145, innerWidth * .32);
+  const drop = Math.min(270, innerHeight * .35);
+  const flight = piece.animate([
+    { transform: 'translate(0, 0) rotate(0deg)', opacity: 1, easing: 'cubic-bezier(.18,.68,.4,1)' },
+    { transform: 'translate(' + direction * distance * .27 + 'px, -35px) rotate(' + direction * 50 + 'deg)', offset: .28, easing: 'cubic-bezier(.55,.03,.9,.66)' },
+    { transform: 'translate(' + direction * distance * .84 + 'px, ' + drop * .74 + 'px) rotate(' + direction * 220 + 'deg)', opacity: .9, offset: .76 },
+    { transform: 'translate(' + direction * distance + 'px, ' + drop + 'px) rotate(' + direction * 320 + 'deg)', opacity: 0 },
+  ], { duration: 730, delay, fill: 'backwards' });
+  flight.finished.then(() => piece.remove(), () => piece.remove());
+}
+
+function animateStack(before, fall, nextTowerNumber) {
+  fall?.slots.forEach((slot, index) => {
+    const position = before.get(fall.towerNumber + ':' + slot);
+    if (!position) return;
+    const [level, column] = slot.split('-').map(Number);
+    const middle = (2 - level) / 2;
+    const direction = column === middle ? (index % 2 ? 1 : -1) : Math.sign(column - middle);
+    launchCan(position, direction, index * 58);
+  });
+  for (const [key, next] of stackPositions()) {
+    const prior = before.get(key);
+    const shell = next.can.parentElement;
+    if (prior) {
+      const x = prior.bounds.left - next.bounds.left;
+      const y = prior.bounds.top - next.bounds.top;
+      if (Math.abs(x) + Math.abs(y) < 1) continue;
+      shell.animate([
+        { transform: 'translate(' + x + 'px, ' + y + 'px)' },
+        { transform: 'translate(0, 0)' },
+      ], { duration: 530, easing: 'cubic-bezier(.18,.76,.24,1)' });
+    } else if (fall && nextTowerNumber !== fall.towerNumber) {
+      const level = Number(key.split(':')[1][0]);
+      shell.animate([
+        { opacity: 0, transform: 'translateY(-22px)' },
+        { opacity: 1, transform: 'translateY(3px)', offset: .76 },
+        { opacity: 1, transform: 'translateY(0)' },
+      ], { duration: 440, delay: 190 + level * 80, fill: 'backwards', easing: 'ease-out' });
+    }
+  }
+}
+
 function enterDart(field, multiplier) {
   if (!data.match || tally(data.match).done) return;
   const match = data.match;
+  const before = match.mode === 'stack' && !reducedMotion.matches && typeof Element.prototype.animate === 'function'
+    ? stackPositions() : null;
   match.darts.push({ field, multiplier });
   ring = 1;
   data.lastUse = new Date().toISOString();
@@ -261,6 +346,7 @@ function enterDart(field, multiplier) {
   }
   save();
   renderMatch();
+  if (before) animateStack(before, state.lastFall, state.towerNumber);
   if (state.done) $('restart').focus();
 }
 

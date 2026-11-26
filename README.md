@@ -1,6 +1,6 @@
 # Tin Shooting
 
-Installierbares Dosen-Dartspiel von Marcus Hörnemann für 1 bis 8 Personen. Sieben Runden auf einen gemeinsamen Dosenturm mit drei Reihen. Der Turm bleibt beim Spielerwechsel stehen. Kettenstürze zählen für den aktuellen Werfer. Das Regelwerk steht in der App unter **Regeln**.
+Installierbares Dosen-Dartspiel von Marcus Hörnemann für 1 bis 8 Personen. Sieben Runden auf einen gemeinsamen Dosenturm aus drei, zwei und einer Dose. Jede Dose hat drei sichtbare Trefferringe. Der Turm bleibt beim Spielerwechsel stehen. Kettenstürze zählen für den aktuellen Werfer. Das Regelwerk steht in der App unter **Regeln**.
 
 - Single, Double, Triple, Bull, Bullseye und Fehlwurf lassen sich von Hand erfassen.
 - Spielerprofile, Auswahl, laufende Partie und die letzten 30 abgeschlossenen Partien bleiben im lokalen Speicher des jeweiligen Browsers. Unter **Spieler** lassen sich Profile löschen. **Verlauf löschen** entfernt den Partieverlauf und den Zeitpunkt der letzten Nutzung.
